@@ -1,13 +1,22 @@
 import { PrismaClient } from "@prisma/client"
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
+declare global {
+  var prisma: PrismaClient | undefined
+}
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-  })
+function getClient(): PrismaClient {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient({
+      log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    })
+  }
+  return global.prisma
+}
 
-// Reuse client in dev to avoid exhausting connections on hot reload.
-// In production (Vercel serverless), each function instance has its own client.
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+// Proxy defers PrismaClient instantiation until first query — prevents
+// build-time failures when DATABASE_URL is not yet available.
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    return Reflect.get(getClient(), prop)
+  },
+})
