@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* SAP Fiori-inspired professional ERP theme */
+    --background: 210 17% 95%;
+    --foreground: 210 11% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 11% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 15%;
+
+    /* SAP blue */
+    --primary: 211 100% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 14% 93%;
+    --secondary-foreground: 210 11% 15%;
+
+    --muted: 210 14% 93%;
+    --muted-foreground: 210 8% 46%;
+
+    --accent: 211 100% 47%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 14% 87%;
+    --input: 210 14% 87%;
+    --ring: 211 100% 47%;
+    --radius: 0.25rem;
+
+    /* Light sidebar */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 210 11% 30%;
+    --sidebar-border: 210 14% 89%;
+    --sidebar-accent: 211 100% 47%;
+
+    --success: 134 55% 34%;
+    --warning: 28 90% 48%;
+    --info: 211 100% 47%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; box-sizing: border-box; }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-size: 13px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(210 14% 78%); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(210 14% 65%); }
+
+  h1, h2, h3, h4 { letter-spacing: -0.01em; }
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(200%); }
+}

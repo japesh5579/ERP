@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pooled connection (Neon PgBouncer)
+  directUrl = env("DIRECT_URL")     // direct connection for migrations
+}
+
+enum Role {
+  SUPER_ADMIN
+  PRODUCTION_MANAGER
+  INVENTORY_MANAGER
+  QUALITY_ENGINEER
+  DISPATCH_STAFF
+}
+
+enum MaterialCategory {
+  COPPER_COIL
+  CRGO_STEEL
+  TRANSFORMER_OIL
+  BUSHINGS
+  INSULATION
+  CORE_FRAME
+  TAPPING_SWITCH
+  COOLING_RADIATOR
+  PACKAGING
+  OTHER
+}
+
+enum POStatus {
+  PENDING
+  APPROVED
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum PhaseType {
+  SINGLE_PHASE
+  THREE_PHASE
+}
+
+enum ProductionStage {
+  RAW_MATERIAL_RECEIVED
+  ASSEMBLY
+  COIL_WINDING
+  CORE_ASSEMBLY
+  OIL_FILLING
+  TESTING
+  QC_APPROVAL
+  DISPATCH_READY
+}
+
+enum TransformerStatus {
+  IN_PRODUCTION
+  ON_HOLD
+  COMPLETED
+  DISPATCHED
+  REJECTED
+}
+
+enum TestType {
+  VOLTAGE_TEST
+  LOAD_TEST
+  TEMPERATURE_RISE
+  INSULATION_RESISTANCE
+  TURNS_RATIO
+  FINAL_QC
+}
+
+enum TestResult {
+  PASS
+  FAIL
+  CONDITIONAL_PASS
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  name        String
+  role        Role      @default(INVENTORY_MANAGER)
+  active      Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assignedTransformers Transformer[] @relation("AssignedEngineer")
+  qualityTests         QualityTest[]
+  dispatches           Dispatch[]
+  loginLogs            LoginLog[]
+}
+
+model LoginLog {
+  id        String   @id @default(cuid())
+  loginAt   DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loginAt])
+}
+
+model RawMaterial {
+  id           String           @id @default(cuid())
+  name         String
+  category     MaterialCategory
+  currentStock Float            @default(0)
+  unit         String
+  minimumStock Float            @default(10)
+  unitPrice    Float            @default(0)
+  location     String?
+  description  String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  vendorId      String?
+  vendor        Vendor?             @relation(fields: [vendorId], references: [id])
+  usageRecords  MaterialUsage[]
+  purchaseItems PurchaseOrderItem[]
+  bomItems      BOMItem[]
+
+  @@index([vendorId])
+  @@index([category])
+}
+
+model Vendor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  gstNumber String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  materials      RawMaterial[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id           String    @id @default(cuid())
+  orderNumber  String    @unique
+  status       POStatus  @default(PENDING)
+  totalAmount  Float     @default(0)
+  expectedDate DateTime?
+  receivedDate DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  vendorId String
+  vendor   Vendor              @relation(fields: [vendorId], references: [id])
+  items    PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id         String @id @default(cuid())
+  quantity   Float
+  unitPrice  Float
+  totalPrice Float
+
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  materialId      String
+  material        RawMaterial   @relation(fields: [materialId], references: [id])
+}
+
+model MaterialUsage {
+  id       String   @id @default(cuid())
+  quantity Float
+  usedAt   DateTime @default(now())
+  notes    String?
+  usedBy   String?
+
+  materialId    String
+  material      RawMaterial  @relation(fields: [materialId], references: [id])
+  transformerId String?
+  transformer   Transformer? @relation(fields: [transformerId], references: [id])
+
+  @@index([materialId])
+  @@index([transformerId])
+}
+
+model Transformer {
+  id           String            @id @default(cuid())
+  modelNumber  String            @unique
+  kvaRating    Float
+  voltageRatio String
+  phaseType    PhaseType         @default(THREE_PHASE)
+  batchNumber  String?
+  currentStage ProductionStage   @default(RAW_MATERIAL_RECEIVED)
+  status       TransformerStatus @default(IN_PRODUCTION)
+  deadline     DateTime?
+  completedAt  DateTime?
+  serialNumber String?
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  engineerId String?
+  engineer   User?   @relation("AssignedEngineer", fields: [engineerId], references: [id])
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  stageHistory   StageHistory[]
+  qualityTests   QualityTest[]
+  materialUsages MaterialUsage[]
+  dispatch       Dispatch?
+
+  @@index([engineerId])
+  @@index([clientId])
+  @@index([status])
+  @@index([currentStage])
+}
+
+model StageHistory {
+  id          String          @id @default(cuid())
+  stage       ProductionStage
+  enteredAt   DateTime        @default(now())
+  exitedAt    DateTime?
+  notes       String?
+  completedBy String?
+
+  transformerId String
+  transformer   Transformer @relation(fields: [transformerId], references: [id], onDelete: Cascade)
+
+  @@index([transformerId])
+}
+
+model QualityTest {
+  id          String     @id @default(cuid())
+  testType    TestType
+  result      TestResult
+  voltage     Float?
+  current     Float?
+  temperature Float?
+  resistance  Float?
+  loadLoss    Float?
+  noLoadLoss  Float?
+  notes       String?
+  faultLog    String?
+  testedAt    DateTime   @default(now())
+
+  transformerId String
+  transformer   Transformer @relation(fields: [transformerId], references: [id])
+  engineerId    String
+  engineer      User        @relation(fields: [engineerId], references: [id])
+
+  @@index([transformerId])
+  @@index([engineerId])
+  @@index([testedAt])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  gstNumber String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transformers Transformer[]
+  dispatches   Dispatch[]
+}
+
+model BillOfMaterials {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items BOMItem[]
+}
+
+model BOMItem {
+  id       String @id @default(cuid())
+  quantity Float
+
+  bomId      String
+  bom        BillOfMaterials @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  materialId String
+  material   RawMaterial     @relation(fields: [materialId], references: [id])
+}
+
+model Dispatch {
+  id              String         @id @default(cuid())
+  invoiceNumber   String         @unique
+  dispatchDate    DateTime?
+  deliveryStatus  DeliveryStatus @default(PENDING)
+  deliveryAddress String?
+  transporterName String?
+  trackingNumber  String?
+  invoiceAmount   Float
+  paidAmount      Float          @default(0)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  transformerId  String      @unique
+  transformer    Transformer @relation(fields: [transformerId], references: [id])
+  clientId       String
+  client         Client      @relation(fields: [clientId], references: [id])
+  dispatchedById String
+  dispatchedBy   User        @relation(fields: [dispatchedById], references: [id])
+}
