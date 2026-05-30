@@ -1,7 +1,10 @@
-function Shimmer({ className }: { className?: string }) {
+import React from 'react'
+
+function Shimmer({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <div
       className={`rounded-md bg-muted relative overflow-hidden ${className}`}
+      style={style}
     >
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
     </div>
