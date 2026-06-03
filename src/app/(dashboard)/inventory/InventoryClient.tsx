@@ -103,7 +103,7 @@ export default function InventoryClient({ isAdmin }: Props) {
   const [loading,   setLoading]   = useState(true)
   const [search,    setSearch]    = useState("")
   const [catFilter, setCatFilter] = useState("")
-  const [viewMode,  setViewMode]  = useState<"cards"|"table">("cards")
+  const [viewMode,  setViewMode]  = useState<"shelf"|"table">("shelf")
 
   const [addOpen,     setAddOpen]     = useState(false)
   const [editOpen,    setEditOpen]    = useState(false)
@@ -306,14 +306,14 @@ export default function InventoryClient({ isAdmin }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View toggle (desktop/admin only) */}
+          {/* View toggle */}
           {isAdmin && (
             <div className="hidden md:flex items-center gap-1 p-1 bg-muted rounded-xl">
-              {(["cards","table"] as const).map(v => (
+              {([["shelf","Shelf"],["table","Table"]] as const).map(([v, label]) => (
                 <button key={v} onClick={() => setViewMode(v)}
-                  className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors capitalize",
+                  className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors",
                     viewMode===v ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                  {v}
+                  {label}
                 </button>
               ))}
             </div>
@@ -366,132 +366,177 @@ export default function InventoryClient({ isAdmin }: Props) {
         </Select>
       </div>
 
-      {/* ══ CARD VIEW ══════════════════════════════════════════════════ */}
-      {viewMode === "cards" && (
-        loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {[...Array(8)].map((_,i) => (
-              <div key={i} className="h-56 bg-white rounded-3xl border border-border skeleton" />
+      {/* ══ SHELF VIEW — Blinkit-style: one row per category ══════════ */}
+      {viewMode === "shelf" && (() => {
+        // Group materials by category, preserving CATEGORY_LABELS order
+        const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS)
+        const grouped: Record<string, RawMaterialWithVendor[]> = {}
+        for (const m of materials) {
+          if (!grouped[m.category]) grouped[m.category] = []
+          grouped[m.category].push(m)
+        }
+        const sortedKeys = CATEGORY_ORDER.filter(k => grouped[k]?.length)
+
+        if (loading) return (
+          <div className="space-y-6">
+            {[...Array(4)].map((_,i) => (
+              <div key={i}>
+                <div className="h-5 w-32 bg-white rounded-lg skeleton mb-3" />
+                <div className="flex gap-3 overflow-hidden">
+                  {[...Array(5)].map((_,j) => (
+                    <div key={j} className="w-40 h-52 flex-shrink-0 bg-white rounded-2xl border border-border skeleton" />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        ) : materials.length === 0 ? (
+        )
+
+        if (materials.length === 0) return (
           <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
             <Package className="w-12 h-12 mb-3 opacity-30" />
             <p className="font-medium">No materials found</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {materials.map((m, idx) => {
-              const status = getStatus(m.currentStock, m.minimumStock)
-              const grad   = CATEGORY_GRADIENTS[m.category] ?? CATEGORY_GRADIENTS.OTHER
-              const { base, variant } = parseName(m.name)
-              const img = (m as any).imageUrl as string | null
+        )
+
+        return (
+          <div className="space-y-6">
+            {sortedKeys.map(cat => {
+              const items = grouped[cat]
+              const grad  = CATEGORY_GRADIENTS[cat] ?? CATEGORY_GRADIENTS.OTHER
 
               return (
-                <div
-                  key={m.id}
-                  className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden card-press animate-fade-up flex flex-col"
-                  style={{ animationDelay: `${idx * 30}ms` }}
-                >
-                  {/* Image / colour band */}
-                  <div className={cn("relative flex-shrink-0 flex items-center justify-center overflow-hidden",
-                    "h-28 md:h-32 bg-gradient-to-br", grad.bg)}>
-                    {img ? (
-                      <img src={img} alt={m.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="w-12 h-12 text-white/70" />
-                    )}
-                    {/* Stock status pill */}
-                    <span className={cn(
-                      "absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm",
-                      status==="critical" ? "bg-red-500/90 text-white" :
-                      status==="low"      ? "bg-orange-400/90 text-white" :
-                                            "bg-emerald-500/90 text-white"
-                    )}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                      {status==="critical"?"Critical":status==="low"?"Low":"In Stock"}
-                    </span>
+                <div key={cat}>
+                  {/* ── Category header ── */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      {/* Colour dot matching card gradient */}
+                      <span className={cn("w-3 h-3 rounded-full bg-gradient-to-br flex-shrink-0", grad.bg)} />
+                      <h3 className="text-[15px] font-bold text-foreground">
+                        {CATEGORY_LABELS[cat] ?? cat}
+                      </h3>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {items.length} item{items.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setCatFilter(cat)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
+                    >
+                      See all →
+                    </button>
                   </div>
 
-                  {/* Card body */}
-                  <div className="flex-1 flex flex-col p-3 gap-2">
-                    {/* Name */}
-                    <div>
-                      <p className="font-bold text-foreground text-sm leading-tight line-clamp-2">{base}</p>
-                      {variant && (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
-                          {variant}
-                        </span>
-                      )}
-                    </div>
+                  {/* ── Horizontal scroll row ── */}
+                  <div
+                    className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0"
+                    style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as any}
+                  >
+                    {items.map(m => {
+                      const status = getStatus(m.currentStock, m.minimumStock)
+                      const img    = (m as any).imageUrl as string | null
+                      const { base, variant } = parseName(m.name)
 
-                    {/* Category */}
-                    <p className="text-[11px] text-muted-foreground">{CATEGORY_LABELS[m.category]??m.category}</p>
-
-                    {/* Stock number */}
-                    <div className="flex items-baseline gap-1 mt-auto">
-                      <span className={cn(
-                        "text-2xl md:text-3xl font-black tabular-nums leading-none",
-                        status==="critical"?"text-red-600":status==="low"?"text-orange-500":"text-emerald-600"
-                      )}>
-                        {m.currentStock}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-medium">{m.unit}</span>
-                    </div>
-
-                    {/* Action buttons */}
-                    {isAdmin ? (
-                      <div className="flex gap-1.5 pt-1">
-                        <button
-                          onClick={() => openUse(m)}
-                          className="flex-1 h-10 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold flex items-center justify-center gap-1 transition-colors active:scale-95"
+                      return (
+                        /* Fixed-width card — flex-shrink-0 keeps them from compressing */
+                        <div
+                          key={m.id}
+                          className="w-40 sm:w-44 flex-shrink-0 bg-white rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col card-press"
                         >
-                          <MinusCircle className="w-3.5 h-3.5" />Use
-                        </button>
-                        <button
-                          onClick={() => openRestock(m)}
-                          className="flex-1 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-1 transition-colors active:scale-95"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5" />Add
-                        </button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="w-10 h-10 rounded-xl bg-muted hover:bg-border flex items-center justify-center flex-shrink-0 transition-colors active:scale-95">
-                              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white border-border rounded-2xl p-1">
-                            <DropdownMenuItem className="cursor-pointer text-sm rounded-xl py-2.5" onClick={()=>openHistory(m)}>
-                              <History className="w-4 h-4 mr-2" />History
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer text-sm rounded-xl py-2.5" onClick={()=>openEdit(m)}>
-                              <Pencil className="w-4 h-4 mr-2" />Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer text-sm rounded-xl py-2.5 text-red-600 focus:text-red-600 focus:bg-red-50" onClick={()=>{setSelected(m);setDeleteOpen(true)}}>
-                              <Trash2 className="w-4 h-4 mr-2" />Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    ) : (
-                      /* Worker: one big button */
-                      <button
-                        onClick={() => openUse(m)}
-                        disabled={m.currentStock <= 0}
-                        className="w-full h-12 mt-1 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
-                      >
-                        <MinusCircle className="w-4 h-4" />
-                        {m.currentStock <= 0 ? "Out of Stock" : "Record Usage"}
-                      </button>
-                    )}
+                          {/* Image band */}
+                          <div className={cn(
+                            "relative flex items-center justify-center overflow-hidden h-24 bg-gradient-to-br",
+                            grad.bg
+                          )}>
+                            {img
+                              ? <img src={img} alt={m.name} className="w-full h-full object-cover" />
+                              : <Package className="w-9 h-9 text-white/70" />
+                            }
+                            {/* Status badge */}
+                            <span className={cn(
+                              "absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold",
+                              status==="critical" ? "bg-red-500 text-white" :
+                              status==="low"      ? "bg-orange-400 text-white" :
+                                                    "bg-emerald-500 text-white"
+                            )}>
+                              {status==="critical"?"Critical":status==="low"?"Low":"OK"}
+                            </span>
+                          </div>
+
+                          {/* Body */}
+                          <div className="flex flex-col p-2.5 gap-1.5 flex-1">
+                            <p className="text-[12px] font-bold text-foreground leading-tight line-clamp-2">{base}</p>
+                            {variant && (
+                              <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 w-fit">
+                                {variant}
+                              </span>
+                            )}
+                            <div className="flex items-baseline gap-1 mt-auto mb-1">
+                              <span className={cn(
+                                "text-xl font-black tabular-nums",
+                                status==="critical"?"text-red-600":status==="low"?"text-orange-500":"text-emerald-600"
+                              )}>
+                                {m.currentStock}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">{m.unit}</span>
+                            </div>
+
+                            {/* Action */}
+                            {isAdmin ? (
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => openUse(m)}
+                                  className="flex-1 h-8 rounded-xl bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center gap-0.5 active:scale-95 transition-transform"
+                                >
+                                  <MinusCircle className="w-3 h-3" />Use
+                                </button>
+                                <button
+                                  onClick={() => openRestock(m)}
+                                  className="flex-1 h-8 rounded-xl bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center gap-0.5 active:scale-95 transition-transform"
+                                >
+                                  <PlusCircle className="w-3 h-3" />Add
+                                </button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center active:scale-95">
+                                      <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-white border-border rounded-2xl p-1">
+                                    <DropdownMenuItem className="cursor-pointer text-sm rounded-xl py-2" onClick={()=>openHistory(m)}>
+                                      <History className="w-4 h-4 mr-2" />History
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="cursor-pointer text-sm rounded-xl py-2" onClick={()=>openEdit(m)}>
+                                      <Pencil className="w-4 h-4 mr-2" />Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="cursor-pointer text-sm rounded-xl py-2 text-red-600" onClick={()=>{setSelected(m);setDeleteOpen(true)}}>
+                                      <Trash2 className="w-4 h-4 mr-2" />Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => openUse(m)}
+                                disabled={m.currentStock <= 0}
+                                className="w-full h-9 rounded-xl bg-blue-600 disabled:bg-gray-200 disabled:text-gray-400 text-white text-[11px] font-bold flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                              >
+                                <MinusCircle className="w-3.5 h-3.5" />
+                                {m.currentStock <= 0 ? "Out of Stock" : "Record Usage"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
             })}
           </div>
         )
-      )}
+      })()}
 
       {/* ══ TABLE VIEW (admin, desktop) ════════════════════════════════ */}
       {viewMode === "table" && (
