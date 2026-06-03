@@ -647,18 +647,25 @@ export default function InventoryClient({ isAdmin }: Props) {
           )}
           <form onSubmit={handleUse} className="space-y-4">
             <div>
-              <Label className="text-sm font-bold mb-2 block">Quantity Used *</Label>
-              <input
-                type="number" inputMode="decimal" min="0.01" step="0.01" max={selected?.currentStock}
-                value={useForm.quantity}
-                onChange={e => setUseForm({...useForm, quantity:e.target.value})}
-                placeholder="0" required autoFocus
-                className="w-full h-14 px-4 rounded-2xl border border-border bg-background text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <Label className="text-sm font-bold mb-2 block">
+                Quantity Used * <span className="font-normal text-muted-foreground">({selected?.unit ?? "unit"})</span>
+              </Label>
+              <div className="relative">
+                <input
+                  type="number" inputMode="decimal" min="0.01" step="0.01" max={selected?.currentStock}
+                  value={useForm.quantity}
+                  onChange={e => setUseForm({...useForm, quantity:e.target.value})}
+                  placeholder="0.00" required autoFocus
+                  className="w-full h-14 px-4 pr-16 rounded-2xl border border-border bg-background text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground pointer-events-none">
+                  {selected?.unit}
+                </span>
+              </div>
               {useForm.quantity && selected && (
                 <p className={cn("text-sm mt-1.5 text-center font-medium",
                   selected.currentStock - +useForm.quantity < LOW ? "text-red-600":"text-muted-foreground")}>
-                  Remaining: <span className="font-bold">{Math.max(0, selected.currentStock - +useForm.quantity)} {selected.unit}</span>
+                  Remaining: <span className="font-bold">{Math.max(0, +(selected.currentStock - +useForm.quantity).toFixed(3))} {selected.unit}</span>
                   {selected.currentStock - +useForm.quantity < LOW && " ⚠"}
                 </p>
               )}
@@ -707,17 +714,24 @@ export default function InventoryClient({ isAdmin }: Props) {
           )}
           <form onSubmit={handleRestock} className="space-y-4">
             <div>
-              <Label className="text-sm font-bold mb-2 block">Quantity to Add *</Label>
-              <input
-                type="number" inputMode="decimal" min="0.01" step="0.01"
-                value={rstForm.quantity}
-                onChange={e => setRstForm({...rstForm, quantity:e.target.value})}
-                placeholder="0" required autoFocus
-                className="w-full h-14 px-4 rounded-2xl border border-border bg-background text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <Label className="text-sm font-bold mb-2 block">
+                Quantity to Add * <span className="font-normal text-muted-foreground">({selected?.unit ?? "unit"})</span>
+              </Label>
+              <div className="relative">
+                <input
+                  type="number" inputMode="decimal" min="0.01" step="0.01"
+                  value={rstForm.quantity}
+                  onChange={e => setRstForm({...rstForm, quantity:e.target.value})}
+                  placeholder="0.00" required autoFocus
+                  className="w-full h-14 px-4 pr-16 rounded-2xl border border-border bg-background text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground pointer-events-none">
+                  {selected?.unit}
+                </span>
+              </div>
               {rstForm.quantity && selected && (
                 <p className="text-sm mt-1.5 text-center text-emerald-600 font-medium">
-                  New total: <span className="font-bold">{selected.currentStock + +rstForm.quantity} {selected.unit}</span>
+                  New total: <span className="font-bold">{+(selected.currentStock + +rstForm.quantity).toFixed(3)} {selected.unit}</span>
                 </p>
               )}
             </div>
