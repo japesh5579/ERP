@@ -1,3 +1,5 @@
+"use client"
+
 export default function OfflinePage() {
   return (
     <div className="min-h-screen bg-blue-600 flex flex-col items-center justify-center text-white p-8">
@@ -9,7 +11,7 @@ export default function OfflinePage() {
       </div>
       <h1 className="text-3xl font-bold mb-2">No Connection</h1>
       <p className="text-blue-100 text-center text-lg mb-8 max-w-xs">
-        The tablet cannot reach the server right now. Please check the network connection.
+        The tablet cannot reach the server. Please check the network connection.
       </p>
       <button
         onClick={() => window.location.reload()}
