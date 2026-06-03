@@ -10,11 +10,8 @@ datasource db {
 }
 
 enum Role {
-  SUPER_ADMIN
-  PRODUCTION_MANAGER
-  INVENTORY_MANAGER
-  QUALITY_ENGINEER
-  DISPATCH_STAFF
+  ADMIN
+  WORKER
 }
 
 enum MaterialCategory {
@@ -89,7 +86,7 @@ model User {
   email       String    @unique
   password    String
   name        String
-  role        Role      @default(INVENTORY_MANAGER)
+  role        Role      @default(WORKER)
   active      Boolean   @default(true)
   lastLoginAt DateTime?
   createdAt   DateTime  @default(now())
@@ -99,6 +96,7 @@ model User {
   qualityTests         QualityTest[]
   dispatches           Dispatch[]
   loginLogs            LoginLog[]
+  materialUsages       MaterialUsage[]
 }
 
 model LoginLog {
@@ -124,6 +122,7 @@ model RawMaterial {
   unitPrice    Float            @default(0)
   location     String?
   description  String?
+  imageUrl     String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
@@ -191,9 +190,12 @@ model MaterialUsage {
   material      RawMaterial  @relation(fields: [materialId], references: [id])
   transformerId String?
   transformer   Transformer? @relation(fields: [transformerId], references: [id])
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([materialId])
   @@index([transformerId])
+  @@index([userId])
 }
 
 model Transformer {

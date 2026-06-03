@@ -47,6 +47,9 @@ export async function PATCH(
   try {
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: Admin only" }, { status: 403 })
+    }
 
     const { id } = await params
     const body = await req.json()
@@ -66,6 +69,7 @@ export async function PATCH(
       location,
       description,
       vendorId,
+      imageUrl,
     } = body
 
     const updated = await prisma.rawMaterial.update({
@@ -80,6 +84,7 @@ export async function PATCH(
         ...(location !== undefined && { location }),
         ...(description !== undefined && { description }),
         ...(vendorId !== undefined && { vendorId: vendorId ?? null }),
+        ...(imageUrl !== undefined && { imageUrl: imageUrl ?? null }),
       },
       include: {
         vendor: {
@@ -102,6 +107,9 @@ export async function DELETE(
   try {
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: Admin only" }, { status: 403 })
+    }
 
     const { id } = await params
 

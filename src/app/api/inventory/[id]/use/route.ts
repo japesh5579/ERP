@@ -58,6 +58,8 @@ export async function POST(
           quantity,
           transformerId: transformerId ?? null,
           notes: notes ?? null,
+          usedBy: session.user.name,
+          userId: session.user.id,
         },
         include: {
           material: { select: { id: true, name: true, unit: true, currentStock: true } },

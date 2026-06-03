@@ -67,11 +67,8 @@ export const CATEGORY_LABELS: Record<string, string> = {
 }
 
 export const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  PRODUCTION_MANAGER: "Production Manager",
-  INVENTORY_MANAGER: "Inventory Manager",
-  QUALITY_ENGINEER: "Quality Engineer",
-  DISPATCH_STAFF: "Dispatch Staff",
+  ADMIN: "Admin",
+  WORKER: "Worker",
 }
 
 export const TEST_TYPE_LABELS: Record<string, string> = {

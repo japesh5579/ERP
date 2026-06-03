@@ -12,8 +12,8 @@ export async function PATCH(
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    if (session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden: SUPER_ADMIN only" }, { status: 403 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: ADMIN only" }, { status: 403 })
     }
 
     const { id } = await params
@@ -71,8 +71,8 @@ export async function DELETE(
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    if (session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden: SUPER_ADMIN only" }, { status: 403 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: ADMIN only" }, { status: 403 })
     }
 
     const { id } = await params

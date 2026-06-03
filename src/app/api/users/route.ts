@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    if (session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden: SUPER_ADMIN only" }, { status: 403 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: ADMIN only" }, { status: 403 })
     }
 
     const users = await prisma.user.findMany({
@@ -24,9 +24,7 @@ export async function GET(req: NextRequest) {
         updatedAt: true,
         _count: {
           select: {
-            assignedTransformers: true,
-            qualityTests: true,
-            dispatches: true,
+            materialUsages: true,
           },
         },
       },
@@ -45,8 +43,8 @@ export async function POST(req: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    if (session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden: SUPER_ADMIN only" }, { status: 403 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: ADMIN only" }, { status: 403 })
     }
 
     const body = await req.json()
@@ -74,7 +72,7 @@ export async function POST(req: NextRequest) {
         email,
         name,
         password: hashedPassword,
-        role: (role as Role) ?? "INVENTORY_MANAGER",
+        role: (role as Role) ?? "WORKER",
         active: true,
       },
       select: {

@@ -5,5 +5,9 @@ node_modules/
 dist/
 *.log
 .DS_Store
-
 .vercel
+
+# Temp scripts
+screenshot*.mjs
+read-sheets.mjs
+import-inventory.mjs

@@ -46,6 +46,9 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth()
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: Admin only" }, { status: 403 })
+    }
 
     const body = await req.json()
     const {
@@ -58,6 +61,7 @@ export async function POST(req: NextRequest) {
       location,
       description,
       vendorId,
+      imageUrl,
     } = body
 
     if (!name || !category || !unit) {
@@ -78,6 +82,7 @@ export async function POST(req: NextRequest) {
         location: location ?? null,
         description: description ?? null,
         vendorId: vendorId ?? null,
+        imageUrl: imageUrl ?? null,
       },
       include: {
         vendor: {
